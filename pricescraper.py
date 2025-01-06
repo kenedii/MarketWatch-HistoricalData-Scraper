@@ -119,4 +119,5 @@ def downloadStockPrice(ticker: str, start_date="01/01/1971 0:00", end_date="01/0
     print(f"Quotes removed from {output_file}.")
 
 # Execute the function
-downloadStockPrice(ticker, start_date, end_date)
+if __name__ == "__main__":
+    downloadStockPrice(ticker, start_date, end_date)
