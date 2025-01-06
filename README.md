@@ -1,10 +1,13 @@
 # MarketWatch-HistoricalData-Scraper
-Get more than 1 year of historical stock data from MarketWatch
+Get more than 1 year of historical stock data from MarketWatch. Gives the data for Date,Open,High,Low,Close.
+
+**Dependencies:**
+
+`pip install requests`
+
+`pip install pandas`
 
 run `python download-cli.py` to get a cli that walks you through instructions on how to download historical data.
-
-Gives the data for Date,Open,High,Low,Close.
-
 
 Instructions (for working with pricescraper.py directly) :
 1. Edit the file and change the variables from lines 7-11 to what you need
