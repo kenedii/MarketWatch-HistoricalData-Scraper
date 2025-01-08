@@ -90,53 +90,39 @@ def downloadStockPrice(ticker: str, start_date="01/01/1971 0:00", end_date="01/0
         print(f"No data retrieved for {ticker}.")
         return
     
+    # Remove commas from numbers before removing quotes
+    combined_data = combined_data.replace({r',': ''}, regex=True)
+
     # Convert 'Date' column to Unix time
     combined_data["Date"] = pd.to_datetime(combined_data["Date"], format="%m/%d/%Y").astype("int64") // 10**9
 
-    # Save to a CSV file
-    output_file = f"{ticker}_data.csv"
-    combined_data.to_csv(output_file, index=False, quoting=1)  # Force minimal quoting
-    print(f"Data for {ticker} saved to {output_file}.")
-
-    # Sort the data by Unix time (earliest to latest)
-    try:
-        data = pd.read_csv(output_file)
-        data["Date"] = data["Date"].astype(int)  # Ensure Unix time is treated as an integer
-        sorted_data = data.sort_values(by="Date", ascending=True)  # Sort from earliest to latest
-        sorted_data.to_csv(output_file, index=False)  # Overwrite the original file
-        print(f"Data sorted by Unix time and saved to {output_file}.")
-    except Exception as e:
-        print(f"Error sorting or saving data: {e}")
-
-    # Remove quotes from the sorted file
-    with open(output_file, 'r') as file:
-        lines = file.readlines()
-
-    with open(output_file, 'w') as file:
-        for line in lines:
-            file.write(line.replace('"', ''))
-
-    print(f"Quotes removed from {output_file}.")
+    # Initialize the columns for returns and log returns
+    combined_data['Returns'] = np.nan
+    combined_data['LogReturns'] = np.nan
 
     # Calculate returns and log returns if required
     if returns:
-        combined_data['Returns'] = np.nan  # Initialize the Returns column
         for i in range(1, len(combined_data)):
-            p1 = combined_data.iloc[i - 1]["Close"]  # Assuming 'Close' is the price column
-            p2 = combined_data.iloc[i]["Close"]
-            t1 = combined_data.iloc[i - 1]["Date"]
-            t2 = combined_data.iloc[i]["Date"]
+            p1 = int(combined_data.iloc[i - 1]["Close"])
+            p2 = int(combined_data.iloc[i]["Close"])
+            t1 = int(combined_data.iloc[i - 1]["Date"])
+            t2 = int(combined_data.iloc[i]["Date"])
             # Calculate returns
-            returns_value = (p2 / p1) / ((t2 - t1) / 86400)  # Convert time difference from seconds to days
-            combined_data.at[i, 'Returns'] = returns_value
+            if p1 != 0 and p2 != 0:
+                returns_value = (p2 / p1) / ((t2 - t1) / 86400)  # Convert time difference from seconds to days
+                combined_data.at[i, 'Returns'] = -1*returns_value
     
     if logreturns:
-        combined_data['LogReturns'] = np.nan  # Initialize the LogReturns column
         for i in range(1, len(combined_data)):
             returns_value = combined_data.iloc[i]["Returns"]
             if returns_value > 0:
                 log_return = np.log(returns_value)
                 combined_data.at[i, 'LogReturns'] = log_return
+
+    # Save the data with returns and log returns to CSV
+    output_file = f"{ticker}_data.csv"
+    combined_data.to_csv(output_file, index=False) 
+    print(f"Data for {ticker} with returns and log returns saved to {output_file}.")
 
 # Execute the function
 if __name__ == "__main__":
