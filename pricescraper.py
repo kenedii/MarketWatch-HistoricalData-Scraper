@@ -3,10 +3,11 @@ import pandas as pd
 import time
 from datetime import datetime, timedelta
 import io
+import numpy as np
 
 # DATES MUST BE IN FORMAT "DD/MM/YYYY HH:MM"
-category = "index"  # 'stock', 'index', 'cryptocurrency', 'currency'
-ticker = "djia"  # Use MarketWatch URL to get the ticker symbol
+category = "cryptocurrency"  # 'stock', 'index', 'cryptocurrency', 'currency'
+ticker = "btcusd"  # Use MarketWatch URL to get the ticker symbol
 start_date = "01/01/1971 0:00"  # Leave unchanged for earliest available data
 end_date = datetime.now().strftime("%d/%m/%Y %H:%M")  # leave unchanged for latest available data
 
@@ -42,8 +43,7 @@ cookies = {
     "refresh": "off"
 }
 
-
-def downloadStockPrice(ticker: str, start_date="01/01/1971 0:00", end_date="01/01/2021 0:00"):
+def downloadStockPrice(ticker: str, start_date="01/01/1971 0:00", end_date="01/01/2021 0:00", returns=True, logreturns=True):
     start_dt = datetime.strptime(start_date, "%d/%m/%Y %H:%M")
     end_dt = datetime.strptime(end_date, "%d/%m/%Y %H:%M")
     
@@ -117,6 +117,26 @@ def downloadStockPrice(ticker: str, start_date="01/01/1971 0:00", end_date="01/0
             file.write(line.replace('"', ''))
 
     print(f"Quotes removed from {output_file}.")
+
+    # Calculate returns and log returns if required
+    if returns:
+        combined_data['Returns'] = np.nan  # Initialize the Returns column
+        for i in range(1, len(combined_data)):
+            p1 = combined_data.iloc[i - 1]["Close"]  # Assuming 'Close' is the price column
+            p2 = combined_data.iloc[i]["Close"]
+            t1 = combined_data.iloc[i - 1]["Date"]
+            t2 = combined_data.iloc[i]["Date"]
+            # Calculate returns
+            returns_value = (p2 / p1) / ((t2 - t1) / 86400)  # Convert time difference from seconds to days
+            combined_data.at[i, 'Returns'] = returns_value
+    
+    if logreturns:
+        combined_data['LogReturns'] = np.nan  # Initialize the LogReturns column
+        for i in range(1, len(combined_data)):
+            returns_value = combined_data.iloc[i]["Returns"]
+            if returns_value > 0:
+                log_return = np.log(returns_value)
+                combined_data.at[i, 'LogReturns'] = log_return
 
 # Execute the function
 if __name__ == "__main__":
