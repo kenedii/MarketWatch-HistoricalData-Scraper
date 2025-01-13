@@ -22,6 +22,8 @@ start_date = "01/01/1971 0:00"  # Leave unchanged for earliest available data
 
 end_date = datetime.now().strftime("%d/%m/%Y %H:%M")  # leave unchanged for latest available data
 
-returns=True, logreturns=True # Whether to include the returns and LogReturns columns in the dataset
+**Parameters of def downloadStockPrice():**
+
+returns=True, logreturns=True # Whether to include the returns and LogReturns columns in the dataset, true by default
 
 2. **Run the file and wait for your csv!**
