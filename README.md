@@ -3,13 +3,12 @@ Get more than 1 year of historical stock data from MarketWatch. Gives the data f
 
 **Dependencies:**
 
-`pip install requests`
-
-`pip install pandas`
+`pip install -r requirements.txt`
 
 run `python download-cli.py` to get a cli that walks you through instructions on how to download historical data.
 
-Instructions (for working with pricescraper.py directly) :
+**Instructions (for working with pricescraper.py directly) :**
+
 1. Edit the file and change the variables from lines 7-11 to what you need
 
 **DATES MUST BE IN FORMAT "DD/MM/YYYY HH:MM"**
