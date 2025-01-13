@@ -1,5 +1,5 @@
 # MarketWatch-HistoricalData-Scraper
-Get more than 1 year of historical stock data from MarketWatch. Gives the data for Date,Open,High,Low,Close.
+Get more than 1 year of historical stock data from MarketWatch. Gives the data for Date,Open,High,Low,Close,Returns,LogReturns.
 
 **Dependencies:**
 
@@ -21,5 +21,7 @@ ticker = "djia"  # Use MarketWatch URL to get the exact ticker symbol
 start_date = "01/01/1971 0:00"  # Leave unchanged for earliest available data
 
 end_date = datetime.now().strftime("%d/%m/%Y %H:%M")  # leave unchanged for latest available data
+
+returns=True, logreturns=True # Whether to include the returns and LogReturns columns in the dataset
 
 2. **Run the file and wait for your csv!**
