@@ -43,10 +43,11 @@ cookies = {
     "refresh": "off"
 }
 
+
 def downloadStockPrice(ticker: str, start_date="01/01/1971 0:00", end_date="01/01/2021 0:00", returns=True, logreturns=True):
     start_dt = datetime.strptime(start_date, "%d/%m/%Y %H:%M")
     end_dt = datetime.strptime(end_date, "%d/%m/%Y %H:%M")
-    
+
     combined_data = pd.DataFrame()
     current_end_dt = end_dt
     one_year = timedelta(days=365)
@@ -56,7 +57,7 @@ def downloadStockPrice(ticker: str, start_date="01/01/1971 0:00", end_date="01/0
         current_start_dt = max(current_end_dt - one_year, start_dt)
         start_date_str = current_start_dt.strftime("%m/%d/%Y %H:%M:%S")
         end_date_str = current_end_dt.strftime("%m/%d/%Y %H:%M:%S")
-        
+
         params = {
             "startdate": start_date_str,
             "enddate": end_date_str,
@@ -66,63 +67,79 @@ def downloadStockPrice(ticker: str, start_date="01/01/1971 0:00", end_date="01/0
             "downloadpartial": "false",
             "newdates": "false"
         }
+
         response = requests.get(base_url, params=params, headers=headers, cookies=cookies)
-        
+
         if response.status_code != 200 or not response.text.strip():
             print(f"No more data available for {ticker} after {current_start_dt.strftime('%Y-%m-%d')}.")
             break
-        
+
         try:
             csv_data = io.StringIO(response.text)
             df = pd.read_csv(csv_data)
             if df.empty:
                 print(f"No data for {ticker} in the period {current_start_dt} to {current_end_dt}.")
                 break
-            
+
             combined_data = pd.concat([df, combined_data], ignore_index=True)
         except Exception as e:
             print(f"Error processing data for {ticker}: {e}")
             break
-        
+
         current_end_dt = current_start_dt - timedelta(seconds=1)
+        time.sleep(1)  # avoid hitting the server too fast
 
     if combined_data.empty:
         print(f"No data retrieved for {ticker}.")
         return
-    
-    # Remove commas from numbers before removing quotes
+
+    # Remove commas and convert numeric columns
     combined_data = combined_data.replace({r',': ''}, regex=True)
+    combined_data["Close"] = pd.to_numeric(combined_data["Close"], errors="coerce")
+    combined_data.dropna(subset=["Close"], inplace=True)
 
-    # Convert 'Date' column to Unix time
-    combined_data["Date"] = pd.to_datetime(combined_data["Date"], format="%m/%d/%Y").astype("int64") // 10**9
+    # Convert 'Date' to Unix time
+    combined_data["Date"] = pd.to_datetime(combined_data["Date"], format="%m/%d/%Y", errors="coerce")
+    combined_data.dropna(subset=["Date"], inplace=True)
+    combined_data["Date"] = combined_data["Date"].astype(np.int64) // 10**9
 
-    # Initialize the columns for returns and log returns
-    combined_data['Returns'] = np.nan
-    combined_data['LogReturns'] = np.nan
+    # Initialize returns columns
+    combined_data["Returns"] = np.nan
+    combined_data["LogReturns"] = np.nan
 
-    # Calculate returns and log returns if required
+    # Calculate returns
     if returns:
         for i in range(1, len(combined_data)):
-            p1 = int(combined_data.iloc[i - 1]["Close"])
-            p2 = int(combined_data.iloc[i]["Close"])
-            t1 = int(combined_data.iloc[i - 1]["Date"])
-            t2 = int(combined_data.iloc[i]["Date"])
-            # Calculate returns
-            if p1 != 0 and p2 != 0:
-                returns_value = (p2 / p1) / ((t2 - t1) / 86400)  # Convert time difference from seconds to days
-                combined_data.at[i, 'Returns'] = -1*returns_value
-    
+            try:
+                p1 = float(combined_data.iloc[i - 1]["Close"])
+                p2 = float(combined_data.iloc[i]["Close"])
+                t1 = int(combined_data.iloc[i - 1]["Date"])
+                t2 = int(combined_data.iloc[i]["Date"])
+
+                if p1 != 0 and p2 != 0 and t2 > t1:
+                    returns_value = (p2 / p1) / ((t2 - t1) / 86400)  # dailyized return
+                    combined_data.at[i, "Returns"] = -1 * returns_value
+            except Exception as e:
+                print(f"Error calculating return at row {i}: {e}")
+                continue
+
+    # Calculate log returns
     if logreturns:
         for i in range(1, len(combined_data)):
-            returns_value = combined_data.iloc[i]["Returns"]
-            if returns_value > 0:
-                log_return = np.log(returns_value)
-                combined_data.at[i, 'LogReturns'] = log_return
+            try:
+                returns_value = combined_data.iloc[i]["Returns"]
+                if pd.notna(returns_value) and returns_value > 0:
+                    log_return = np.log(returns_value)
+                    combined_data.at[i, "LogReturns"] = log_return
+            except Exception as e:
+                print(f"Error calculating log return at row {i}: {e}")
+                continue
 
     # Save the data with returns and log returns to CSV
     output_file = f"{ticker}_data.csv"
-    combined_data.to_csv(output_file, index=False) 
+    combined_data.to_csv(output_file, index=False)
     print(f"Data for {ticker} with returns and log returns saved to {output_file}.")
+
 
 # Execute the function
 if __name__ == "__main__":
